@@ -1,0 +1,23 @@
+name: Security Checks
+on:
+  push:
+    branches:
+      - master
+      - dev
+      - feature/*
+      - hotfix/*
+      - release/*
+      - bugfix/*
+      - integration/*
+  pull_request:
+    branches:
+      - master
+      - dev
+  workflow_dispatch:
+
+jobs:
+  security_checks:
+    uses: code-brew-lab/go-workflows/.github/workflows/security_checks.yml@master
+    with:
+      go-version: ${{ vars.GO_VERSION }}
+    secrets: inherit
