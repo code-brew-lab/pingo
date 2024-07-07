@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 )
 
-func Calculate(b []byte) (uint16, error) {
+func Calculate(b []byte) uint16 {
 	if len(b)%2 != 0 {
 		b = append(b, 0)
 	}
@@ -18,14 +18,9 @@ func Calculate(b []byte) (uint16, error) {
 		sum = (sum & 0xFFFF) + (sum >> 16)
 	}
 
-	return ^uint16(sum), nil
+	return ^uint16(sum)
 }
 
 func Verify(b []byte) bool {
-	sum, err := Calculate(b)
-	if err != nil {
-		return false
-	}
-
-	return sum == 0xFFFF
+	return Calculate(b) == 0
 }
