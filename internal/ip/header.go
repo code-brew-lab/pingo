@@ -2,11 +2,10 @@ package ip
 
 import (
 	"encoding/binary"
-	"encoding/hex"
 	"errors"
 	"fmt"
 
-	"github.com/code-brew-lab/pingo/internal/checksum"
+	"github.com/code-brew-lab/pingo/internal/netcore/checksum"
 )
 
 type (
@@ -46,8 +45,8 @@ func ParseHeader(h []byte) (*Header, int, error) {
 	}
 
 	headerLen := h[0] & 0x0F
-	fmt.Println(hex.EncodeToString(h[:headerLen*headerMultiplier]))
-	if !checksum.Verify(h[:headerLen*headerMultiplier]) {
+	totalLen := headerLen * headerMultiplier
+	if !checksum.Verify(h[:totalLen]) {
 		return nil, 0, errors.New("ip.ParseHeader: Checksum verification failed")
 	}
 
@@ -70,9 +69,9 @@ func ParseHeader(h []byte) (*Header, int, error) {
 	copy(dstIP, h[16:20])
 
 	var options []byte
-	if headerLen > 5 {
+	if totalLen > minHeaderLen {
 		options = make([]byte, (headerLen-5)*headerMultiplier)
-		copy(options, h[20:headerLen*headerMultiplier])
+		copy(options, h[minHeaderLen:totalLen])
 	}
 
 	return &Header{
@@ -180,6 +179,3 @@ func (h *Header) Marshal() []byte {
 
 	return buff
 }
-
-// Wireshark => Req: 45000054df2100004001da0ac0a8016dd8ef2678,  Resp: 45000054000000003801c12cd8ef2678c0a8016d
-// Pingo     => 45004000000000003801c12cd8ef2678c0a8016d
