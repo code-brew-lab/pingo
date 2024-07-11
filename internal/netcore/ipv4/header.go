@@ -1,26 +1,27 @@
-package ip
+package ipv4
 
 import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"net"
 
 	"github.com/code-brew-lab/pingo/internal/netcore/checksum"
 )
 
 type (
 	Header struct {
-		version     uint8 // 4 bits
-		headerLen   uint8 // 4 bits
+		version     uint8
+		headerLen   uint8
 		serviceType uint8
 		datagramLen uint16
 		id          uint16
 		flags       uint16
 		ttl         uint8
-		proto       uint8
+		proto       Proto
 		checksum    uint16
-		srcIP       []byte
-		dstIP       []byte
+		srcIP       net.IP
+		dstIP       net.IP
 		options     []byte
 	}
 
@@ -34,20 +35,20 @@ const (
 	minHeaderLen     uint8 = 20
 )
 
-func ParseHeader(h []byte) (*Header, int, error) {
+func parseHeader(h []byte) (*Header, int, error) {
 	if len(h) < int(minHeaderLen) {
-		return nil, 0, fmt.Errorf("ip.ParseHeader: Header length must be at least %d bytes", minHeaderLen)
+		return nil, 0, fmt.Errorf("header length must be at least %d bytes", minHeaderLen)
 	}
 
 	version := h[0] >> 4
 	if version != 4 {
-		return nil, 0, fmt.Errorf("ip.ParseHeader: Unsupported IP version %d. Only IPv4 is supported", version)
+		return nil, 0, fmt.Errorf("unsupported IP version %d. Only IPv4 is supported", version)
 	}
 
 	headerLen := h[0] & 0x0F
 	totalLen := headerLen * headerMultiplier
 	if !checksum.Verify(h[:totalLen]) {
-		return nil, 0, errors.New("ip.ParseHeader: Checksum verification failed")
+		return nil, 0, errors.New("checksum verification failed")
 	}
 
 	be := binary.BigEndian
@@ -59,7 +60,7 @@ func ParseHeader(h []byte) (*Header, int, error) {
 	flags := be.Uint16(h[6:8])
 
 	ttl := h[8]
-	proto := h[9]
+	proto := ParseProto(h[9])
 
 	cs := be.Uint16(h[10:12])
 
@@ -125,17 +126,17 @@ func (hb *HeaderBuilder) Flags(f uint16) *HeaderBuilder {
 	return hb
 }
 
-func (hb *HeaderBuilder) Protocol(p uint8) *HeaderBuilder {
+func (hb *HeaderBuilder) Protocol(p Proto) *HeaderBuilder {
 	hb.proto = p
 	return hb
 }
 
-func (hb *HeaderBuilder) SourceIP(ip []byte) *HeaderBuilder {
+func (hb *HeaderBuilder) SourceIP(ip net.IP) *HeaderBuilder {
 	hb.srcIP = ip
 	return hb
 }
 
-func (hb *HeaderBuilder) DestinationIP(ip []byte) *HeaderBuilder {
+func (hb *HeaderBuilder) DestinationIP(ip net.IP) *HeaderBuilder {
 	hb.dstIP = ip
 	return hb
 }
@@ -166,7 +167,7 @@ func (h *Header) Marshal() []byte {
 	be.PutUint16(buff[6:8], h.flags)
 
 	buff[8] = h.ttl
-	buff[9] = h.proto
+	buff[9] = h.proto.Uint8()
 
 	i := 12
 	i += copy(buff[i:i+4], h.srcIP[:])

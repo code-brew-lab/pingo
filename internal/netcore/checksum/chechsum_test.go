@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/code-brew-lab/pingo/internal/checksum"
+	"github.com/code-brew-lab/pingo/internal/netcore/checksum"
 )
 
 type (
