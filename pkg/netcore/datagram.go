@@ -67,6 +67,14 @@ func (d *Datagram) Raw() []byte {
 	return d.raw
 }
 
+func (d *Datagram) IP() *IP {
+	return d.ip
+}
+
+func (d *Datagram) Transporter() Transporter {
+	return d.t
+}
+
 func parseTransporter(b []byte, p Protocol) (Transporter, int, error) {
 	switch p {
 	case ProtocolICMP:

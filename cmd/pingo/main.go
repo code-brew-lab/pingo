@@ -30,5 +30,9 @@ func main() {
 		}
 
 		fmt.Printf("Raw Datagram: %s\n", hex.EncodeToString(datagram.Raw()))
+		ip := datagram.IP()
+		t := datagram.Transporter()
+		fmt.Println(hex.EncodeToString(ip.Marshal()))
+		fmt.Print(hex.EncodeToString(t.Marshal()))
 	}
 }

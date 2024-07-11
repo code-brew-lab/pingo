@@ -31,13 +31,13 @@ type (
 )
 
 const (
-	headerMultiplier uint8 = 4
-	minHeaderLen     uint8 = 20
+	ipMultiplier uint8 = 4
+	minIPLen     uint8 = 20
 )
 
 func ParseIP(b []byte, p Protocol) (*IP, int, error) {
-	if len(b) < int(minHeaderLen) {
-		return nil, 0, fmt.Errorf("netcore.ParseIP: Header length must be at least %d bytes", minHeaderLen)
+	if len(b) < int(minIPLen) {
+		return nil, 0, fmt.Errorf("netcore.ParseIP: IP length must be at least %d bytes", minIPLen)
 	}
 
 	version := b[0] >> 4
@@ -46,7 +46,7 @@ func ParseIP(b []byte, p Protocol) (*IP, int, error) {
 	}
 
 	headerLen := b[0] & 0x0F
-	totalLen := headerLen * headerMultiplier
+	totalLen := headerLen * ipMultiplier
 	if !checksum.Verify(b[:totalLen]) {
 		return nil, 0, errors.New("netcore.ParseIP: Checksum verification failed")
 	}
@@ -73,9 +73,9 @@ func ParseIP(b []byte, p Protocol) (*IP, int, error) {
 	copy(dstIP, b[16:20])
 
 	var options []byte
-	if totalLen > minHeaderLen {
-		options = make([]byte, (headerLen-5)*headerMultiplier)
-		copy(options, b[minHeaderLen:totalLen])
+	if totalLen > minIPLen {
+		options = make([]byte, (headerLen-5)*ipMultiplier)
+		copy(options, b[minIPLen:totalLen])
 	}
 
 	return &IP{
@@ -92,7 +92,7 @@ func ParseIP(b []byte, p Protocol) (*IP, int, error) {
 			dstIP:       dstIP,
 			options:     options,
 		},
-		int(headerLen * headerMultiplier),
+		int(headerLen * ipMultiplier),
 		nil
 }
 
@@ -144,16 +144,16 @@ func (ib *IPBuilder) Build() (*IP, error) {
 		return nil, fmt.Errorf("netcore.IPBuilder.Build: Unsupported IP version %d. Only IPv4 is supported", ib.version)
 	}
 
-	headerLen := ib.headerLen * headerMultiplier
-	if headerLen < minHeaderLen {
-		return nil, fmt.Errorf("netcore.IPBuilder.Build: Invalid header length %d. Header length must be at least %d bytes", headerLen, minHeaderLen)
+	headerLen := ib.headerLen * ipMultiplier
+	if headerLen < minIPLen {
+		return nil, fmt.Errorf("netcore.IPBuilder.Build: Invalid header length %d. Header length must be at least %d bytes", headerLen, minIPLen)
 	}
 
 	return ib.IP, nil
 }
 
 func (ip *IP) Marshal() []byte {
-	buff := make([]byte, ip.headerLen*headerMultiplier)
+	buff := make([]byte, ip.headerLen*ipMultiplier)
 	be := binary.BigEndian
 
 	var vh uint8 = (ip.version << 4) + (ip.headerLen & 0x0F)
@@ -171,7 +171,7 @@ func (ip *IP) Marshal() []byte {
 	i += copy(buff[i:i+4], ip.srcIP[:])
 	i += copy(buff[i:i+4], ip.dstIP[:])
 
-	copy(buff[i:ip.headerLen*headerMultiplier], ip.options)
+	copy(buff[i:ip.headerLen*ipMultiplier], ip.options)
 
 	ch := checksum.Calculate(buff)
 	be.PutUint16(buff[10:12], ch)
