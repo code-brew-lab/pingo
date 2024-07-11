@@ -12,8 +12,8 @@ type (
 	}
 )
 
-func Parse(b []byte) (*IP, int, error) {
-	header, i, err := parseHeader(b)
+func Parse(b []byte, p Proto) (*IP, int, error) {
+	header, i, err := parseHeader(b, p)
 	if err != nil {
 		return nil, 0, fmt.Errorf("ipv4.Parse: %s", err)
 	}

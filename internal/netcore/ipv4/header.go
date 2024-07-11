@@ -35,7 +35,7 @@ const (
 	minHeaderLen     uint8 = 20
 )
 
-func parseHeader(h []byte) (*Header, int, error) {
+func parseHeader(h []byte, p Proto) (*Header, int, error) {
 	if len(h) < int(minHeaderLen) {
 		return nil, 0, fmt.Errorf("header length must be at least %d bytes", minHeaderLen)
 	}
@@ -61,6 +61,9 @@ func parseHeader(h []byte) (*Header, int, error) {
 
 	ttl := h[8]
 	proto := ParseProto(h[9])
+	if proto != p {
+		return nil, 0, fmt.Errorf("unsupported protocol: %s", p.String())
+	}
 
 	cs := be.Uint16(h[10:12])
 
@@ -93,14 +96,14 @@ func parseHeader(h []byte) (*Header, int, error) {
 		nil
 }
 
-func NewHeaderBuilder() *HeaderBuilder {
+func NewHeaderBuilder(dstIP net.IP) *HeaderBuilder {
 	header := &Header{
 		version:   4,
 		headerLen: 5,
 		proto:     1,
 		ttl:       255,
-		srcIP:     []byte{127, 0, 0, 1},
-		dstIP:     []byte{0, 0, 0, 0},
+		srcIP:     net.IPv4(127, 0, 0, 1),
+		dstIP:     dstIP,
 	}
 
 	return &HeaderBuilder{header}
@@ -133,11 +136,6 @@ func (hb *HeaderBuilder) Protocol(p Proto) *HeaderBuilder {
 
 func (hb *HeaderBuilder) SourceIP(ip net.IP) *HeaderBuilder {
 	hb.srcIP = ip
-	return hb
-}
-
-func (hb *HeaderBuilder) DestinationIP(ip net.IP) *HeaderBuilder {
-	hb.dstIP = ip
 	return hb
 }
 

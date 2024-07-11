@@ -6,6 +6,7 @@ import (
 	"syscall"
 
 	"github.com/code-brew-lab/pingo/internal/netcore"
+	"github.com/code-brew-lab/pingo/internal/netcore/ipv4"
 )
 
 func main() {
@@ -23,7 +24,7 @@ func main() {
 			continue
 		}
 
-		datagram, err := netcore.ParseDatagram(buf[:numRead])
+		datagram, err := netcore.ParseDatagram(buf[:numRead], ipv4.ProtoICMP)
 		if err != nil {
 			fmt.Println(err)
 			continue
