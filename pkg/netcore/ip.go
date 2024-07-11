@@ -37,18 +37,18 @@ const (
 
 func ParseIP(b []byte, p Protocol) (*IP, int, error) {
 	if len(b) < int(minHeaderLen) {
-		return nil, 0, fmt.Errorf("header length must be at least %d bytes", minHeaderLen)
+		return nil, 0, fmt.Errorf("netcore.ParseIP: Header length must be at least %d bytes", minHeaderLen)
 	}
 
 	version := b[0] >> 4
 	if version != 4 {
-		return nil, 0, fmt.Errorf("unsupported IP version %d. Only IPv4 is supported", version)
+		return nil, 0, fmt.Errorf("netcore.ParseIP: Unsupported IP version %d. Only IPv4 is supported", version)
 	}
 
 	headerLen := b[0] & 0x0F
 	totalLen := headerLen * headerMultiplier
 	if !checksum.Verify(b[:totalLen]) {
-		return nil, 0, errors.New("checksum verification failed")
+		return nil, 0, errors.New("netcore.ParseIP: Checksum verification failed")
 	}
 
 	be := binary.BigEndian
@@ -62,7 +62,7 @@ func ParseIP(b []byte, p Protocol) (*IP, int, error) {
 	ttl := b[8]
 	proto := ParseProtocol(b[9])
 	if proto != p {
-		return nil, 0, fmt.Errorf("unsupported protocol: %s", p.String())
+		return nil, 0, fmt.Errorf("netcore.ParseIP: Unsupported protocol: %s", p.String())
 	}
 
 	cs := be.Uint16(b[10:12])
@@ -141,12 +141,12 @@ func (ib *IPBuilder) SourceIP(ip net.IP) *IPBuilder {
 
 func (ib *IPBuilder) Build() (*IP, error) {
 	if ib.version != 4 {
-		return nil, fmt.Errorf("ip.HeaderBuilder.Build: Unsupported IP version %d. Only IPv4 is supported", ib.version)
+		return nil, fmt.Errorf("netcore.IPBuilder.Build: Unsupported IP version %d. Only IPv4 is supported", ib.version)
 	}
 
 	headerLen := ib.headerLen * headerMultiplier
 	if headerLen < minHeaderLen {
-		return nil, fmt.Errorf("ip.HeaderBuilder.Build: Invalid header length %d. Header length must be at least %d bytes", headerLen, minHeaderLen)
+		return nil, fmt.Errorf("netcore.IPBuilder.Build: Invalid header length %d. Header length must be at least %d bytes", headerLen, minHeaderLen)
 	}
 
 	return ib.IP, nil
