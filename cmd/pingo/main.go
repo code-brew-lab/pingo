@@ -1,11 +1,11 @@
 package main
 
 import (
-	"encoding/hex"
 	"fmt"
 	"syscall"
+	"time"
 
-	"github.com/code-brew-lab/pingo/pkg/netcore"
+	"github.com/code-brew-lab/pingo/pkg/pingo"
 )
 
 func main() {
@@ -16,40 +16,22 @@ func main() {
 	}
 	defer syscall.Close(fd)
 
-	icmp, err := netcore.NewICMP(netcore.ControlKindEchoRequest, 1)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	doneChan := make(chan bool)
+	go func() {
+		dataChan, errChan := pingo.Read(doneChan, fd)
 
-	addr := &syscall.SockaddrInet4{
-		Port: 0,
-		Addr: [4]byte{216, 239, 38, 120},
-	}
-
-	err = syscall.Sendto(fd, icmp.Marshal(), 0, addr)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	for {
-		buff := make([]byte, 1024)
-		numRead, err := syscall.Read(fd, buff)
-		if err != nil {
-			fmt.Println(err)
-			continue
+		for {
+			select {
+			case d := <-dataChan:
+				ip := d.IP()
+				icmp := d.ICMP()
+				fmt.Printf("%s -> %s\n", ip.SourceIP(), ip.DestinationIP())
+				fmt.Printf("Kind: %s, Status: %s\n", icmp.Kind(), icmp.Code().String(icmp.Kind()))
+			case e := <-errChan:
+				fmt.Println(e)
+			}
 		}
-		fmt.Printf("Raw Datagram:%s\n", hex.EncodeToString(buff[:numRead]))
-		d, err := netcore.ParseDatagram(buff[:numRead], netcore.ProtocolICMP)
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-		ip := d.IP()
-		icmp := d.ICMP()
-		fmt.Printf("%s -> %s\n", ip.SourceIP(), ip.DestinationIP())
-		fmt.Printf("Kind: %s, Status: %s\n", icmp.Kind(), icmp.Code().String(icmp.Kind()))
-
-	}
+	}()
+	time.Sleep(time.Second * 5)
+	doneChan <- true
 }

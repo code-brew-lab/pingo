@@ -2,7 +2,6 @@ package netcore
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"math/rand"
 
@@ -53,11 +52,7 @@ func ParseICMP(b []byte) (*ICMP, int, error) {
 	}, len(b), nil
 }
 
-func NewICMP(kind ControlKind, seq uint16) (*ICMP, error) {
-	if seq < 0 {
-		return nil, errors.New("netcore.NewICMP: Sequence number should be greater than 0")
-	}
-
+func NewICMP(kind ControlKind, seq uint16) *ICMP {
 	icmp := &ICMP{
 		kind: kind,
 		code: 0,
@@ -65,7 +60,7 @@ func NewICMP(kind ControlKind, seq uint16) (*ICMP, error) {
 		seq:  seq,
 	}
 
-	return icmp, nil
+	return icmp
 }
 
 func (icmp *ICMP) Marshal() []byte {
