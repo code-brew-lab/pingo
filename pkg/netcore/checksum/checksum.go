@@ -5,13 +5,16 @@ import (
 )
 
 func Calculate(b []byte) uint16 {
-	if len(b)%2 != 0 {
-		b = append(b, 0)
+	raw := make([]byte, len(b))
+	copy(raw, b)
+
+	if len(raw)%2 != 0 {
+		raw = append(raw, 0)
 	}
 
 	var sum uint32
-	for i := 0; i < len(b); i += 2 {
-		sum += uint32(binary.BigEndian.Uint16(b[i : i+2]))
+	for i := 0; i < len(raw); i += 2 {
+		sum += uint32(binary.BigEndian.Uint16(raw[i : i+2]))
 	}
 
 	for sum>>16 != 0 {

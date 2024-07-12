@@ -4,10 +4,14 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math/rand"
 	"net"
 
 	"github.com/code-brew-lab/pingo/pkg/netcore/checksum"
 )
+
+//4500001c000000004001b964c0a8016dd8ef2678
+//4500001c000000004001b964c0a8016dd8ef26780800f7ff00000000
 
 type (
 	IP struct {
@@ -22,7 +26,6 @@ type (
 		checksum    uint16
 		srcIP       net.IP
 		dstIP       net.IP
-		options     []byte
 	}
 
 	IPBuilder struct {
@@ -32,12 +35,15 @@ type (
 
 const (
 	ipMultiplier uint8 = 4
-	minIPLen     uint8 = 20
+)
+
+const (
+	ipLength uint8 = 20
 )
 
 func ParseIP(b []byte, p Protocol) (*IP, int, error) {
-	if len(b) < int(minIPLen) {
-		return nil, 0, fmt.Errorf("netcore.ParseIP: IP length must be at least %d bytes", minIPLen)
+	if len(b) < int(ipLength) {
+		return nil, 0, fmt.Errorf("netcore.ParseIP: IP length must be at least %d bytes", ipLength)
 	}
 
 	version := b[0] >> 4
@@ -72,12 +78,6 @@ func ParseIP(b []byte, p Protocol) (*IP, int, error) {
 	dstIP := make([]byte, 4)
 	copy(dstIP, b[16:20])
 
-	var options []byte
-	if totalLen > minIPLen {
-		options = make([]byte, (headerLen-5)*ipMultiplier)
-		copy(options, b[minIPLen:totalLen])
-	}
-
 	return &IP{
 			version:     version,
 			headerLen:   headerLen,
@@ -90,7 +90,6 @@ func ParseIP(b []byte, p Protocol) (*IP, int, error) {
 			checksum:    cs,
 			srcIP:       srcIP,
 			dstIP:       dstIP,
-			options:     options,
 		},
 		int(headerLen * ipMultiplier),
 		nil
@@ -100,8 +99,9 @@ func NewIPBuilder(dstIP net.IP) *IPBuilder {
 	ip := &IP{
 		version:   4,
 		headerLen: 5,
+		id:        uint16(rand.Uint32()),
 		proto:     1,
-		ttl:       255,
+		ttl:       64,
 		srcIP:     net.IPv4(127, 0, 0, 1),
 		dstIP:     dstIP,
 	}
@@ -145,9 +145,11 @@ func (ib *IPBuilder) Build() (*IP, error) {
 	}
 
 	headerLen := ib.headerLen * ipMultiplier
-	if headerLen < minIPLen {
-		return nil, fmt.Errorf("netcore.IPBuilder.Build: Invalid header length %d. Header length must be at least %d bytes", headerLen, minIPLen)
+	if headerLen < ipLength {
+		return nil, fmt.Errorf("netcore.IPBuilder.Build: Invalid header length %d. Header length must be at least %d bytes", headerLen, ipLength)
 	}
+
+	ib.datagramLen += uint16(ib.headerLen * ipMultiplier)
 
 	return ib.IP, nil
 }
@@ -160,22 +162,19 @@ func (ip *IP) Marshal() []byte {
 	buff[0] = vh
 	buff[1] = ip.serviceType
 
-	be.PutUint16(buff[2:4], ip.datagramLen)
-	be.PutUint16(buff[4:6], ip.id)
-	be.PutUint16(buff[6:8], ip.flags)
+	be.PutUint16(buff[2:], ip.datagramLen)
+	be.PutUint16(buff[4:], ip.id)
+	be.PutUint16(buff[6:], ip.flags)
 
 	buff[8] = ip.ttl
 	buff[9] = ip.proto.Uint8()
 
 	i := 12
-	i += copy(buff[i:i+4], ip.srcIP[:])
-	i += copy(buff[i:i+4], ip.dstIP[:])
-
-	copy(buff[i:ip.headerLen*ipMultiplier], ip.options)
+	i += copy(buff[i:], ip.srcIP.To4())
+	i += copy(buff[i:], ip.dstIP.To4())
 
 	ch := checksum.Calculate(buff)
-	be.PutUint16(buff[10:12], ch)
-
+	be.PutUint16(buff[10:], ch)
 	return buff
 }
 
@@ -205,10 +204,6 @@ func (ip *IP) TTL() uint8 {
 
 func (ip *IP) Protocol() Protocol {
 	return ip.proto
-}
-
-func (ip *IP) Checksum() uint16 {
-	return ip.checksum
 }
 
 func (ip *IP) SourceIP() net.IP {

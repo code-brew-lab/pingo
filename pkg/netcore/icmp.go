@@ -8,6 +8,8 @@ import (
 	"github.com/code-brew-lab/pingo/pkg/netcore/checksum"
 )
 
+//0800f7ff00000000
+
 type (
 	ICMP struct {
 		kind       ControlKind
@@ -18,19 +20,19 @@ type (
 )
 
 const (
-	minICMPLen uint16 = 8
-	maxICMPLen uint16 = 576
+	minICMPLength uint16 = 8
+	maxICMPLength uint16 = 576
 )
 
 func ParseICMP(b []byte) (*ICMP, int, error) {
-	if len(b) < int(minICMPLen) {
-		return nil, 0, fmt.Errorf("netcore.ParseICMP: ICMP length must be at least %d bytes", minICMPLen)
+	if len(b) < int(minICMPLength) {
+		return nil, 0, fmt.Errorf("netcore.ParseICMP: ICMP length must be at least %d bytes", minICMPLength)
 	}
-	if len(b) > int(maxICMPLen) {
-		return nil, 0, fmt.Errorf("netcore.ParseICMP: ICMP length must not exceed %d bytes", maxICMPLen)
+	if len(b) > int(maxICMPLength) {
+		return nil, 0, fmt.Errorf("netcore.ParseICMP: ICMP length must not exceed %d bytes", maxICMPLength)
 	}
 	if !checksum.Verify(b) {
-		return nil, 0, errors.New("netcore.ParseIP: Checksum verification failed")
+		return nil, 0, errors.New("netcore.ParseICMP: Checksum verification failed")
 	}
 
 	be := binary.BigEndian
@@ -49,16 +51,31 @@ func ParseICMP(b []byte) (*ICMP, int, error) {
 	}, len(b), nil
 }
 
+func NewICMP(kind ControlKind, headerRest ...byte) (*ICMP, error) {
+	if len(headerRest) != 0 && len(headerRest) != 4 {
+		return nil, errors.New("netcore.NewICMP: Reaming header must be 4 bytes long")
+	}
+
+	icmp := &ICMP{
+		kind:       kind,
+		code:       0,
+		headerRest: headerRest,
+	}
+
+	return icmp, nil
+}
+
 func (icmp *ICMP) Marshal() []byte {
-	buff := make([]byte, minICMPLen)
+	buff := make([]byte, minICMPLength)
 	be := binary.BigEndian
 
 	buff[0] = icmp.Kind().Uint8()
 	buff[1] = icmp.Code().Uint8()
 
-	be.PutUint16(buff[2:4], icmp.checksum)
-
 	copy(buff[4:8], icmp.headerRest)
+
+	ch := checksum.Calculate(buff)
+	be.PutUint16(buff[2:4], ch)
 
 	return buff
 }
@@ -71,10 +88,6 @@ func (icmp *ICMP) Code() ControlCode {
 	return icmp.code
 }
 
-func (icmp *ICMP) Checksum() uint16 {
-	return icmp.checksum
-}
-
-func (icmp *ICMP) HeaderRest() [4]byte {
-	return [4]byte(icmp.headerRest)
+func (icmp *ICMP) HeaderRest() []byte {
+	return icmp.headerRest
 }
