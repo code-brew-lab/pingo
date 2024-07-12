@@ -2,16 +2,12 @@ package netcore
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"math/rand"
 	"net"
 
 	"github.com/code-brew-lab/pingo/pkg/netcore/checksum"
 )
-
-//4500001c000000004001b964c0a8016dd8ef2678
-//4500001c000000004001b964c0a8016dd8ef26780800f7ff00000000
 
 type (
 	IP struct {
@@ -52,10 +48,6 @@ func ParseIP(b []byte, p Protocol) (*IP, int, error) {
 	}
 
 	headerLen := b[0] & 0x0F
-	totalLen := headerLen * ipMultiplier
-	if !checksum.Verify(b[:totalLen]) {
-		return nil, 0, errors.New("netcore.ParseIP: Checksum verification failed")
-	}
 
 	be := binary.BigEndian
 
