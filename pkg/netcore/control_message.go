@@ -10,8 +10,8 @@ const (
 	ControlKindEchoReply              ControlKind = 0x0  // 0   - Echo Reply
 	ControlKindDestinationUnreachable ControlKind = 0x3  // 3   - Destination Unreachable
 	ControlKindEchoRequest            ControlKind = 0x8  // 8   - Echo Request
-	ControlKindExtendedEchoReply      ControlKind = 0x2B // 43  - Extended Echo Reply
 	ControlKindExtendedEchoRequest    ControlKind = 0x2A // 42  - Extended Echo Request
+	ControlKindExtendedEchoReply      ControlKind = 0x2B // 43  - Extended Echo Reply
 )
 
 // ControlCode definitions for Echo Reply (ControlKind = 0)

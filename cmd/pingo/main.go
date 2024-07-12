@@ -18,6 +18,7 @@ func main() {
 	defer syscall.Close(fd)
 
 	ip, err := netcore.NewIPBuilder(net.IPv4(216, 239, 38, 120)).
+		SourceIP(net.IPv4(198, 19, 249, 159)).
 		Protocol(netcore.ProtocolICMP).
 		Build()
 	if err != nil {
@@ -25,7 +26,7 @@ func main() {
 		return
 	}
 
-	icmp, err := netcore.NewICMP(netcore.ControlKindExtendedEchoRequest)
+	icmp, err := netcore.NewICMP(netcore.ControlKindEchoRequest)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -39,7 +40,7 @@ func main() {
 
 	addr := &syscall.SockaddrInet4{
 		Port: 0,
-		Addr: [4]byte{216, 239, 38, 120},
+		Addr: [4]byte{198, 19, 249, 1},
 	}
 
 	err = syscall.Sendto(fd, datagram.Marshal(), 0, addr)
@@ -65,10 +66,8 @@ func main() {
 		fmt.Printf("Raw Datagram: %s\n", hex.EncodeToString(datagram.Marshal()))
 		ip := datagram.IP()
 		icmp := datagram.ICMP()
-		fmt.Println(ip.SourceIP())
-		fmt.Println(ip.DestinationIP())
-		fmt.Println(icmp.Kind())
-		fmt.Println(icmp.Code().String(icmp.Kind()))
+		fmt.Printf("%s -> %s\n", ip.SourceIP(), ip.DestinationIP())
+		fmt.Printf("Kind: %s, Status: %s\n", icmp.Kind(), icmp.Code().String(icmp.Kind()))
 
 	}
 }
