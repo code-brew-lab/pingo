@@ -3,7 +3,6 @@ package netcore
 import (
 	"encoding/binary"
 	"fmt"
-	"math/rand"
 	"net"
 
 	"github.com/code-brew-lab/pingo/pkg/netcore/checksum"
@@ -15,7 +14,7 @@ type (
 		headerLen   uint8
 		serviceType uint8
 		datagramLen uint16
-		id          uint16
+		id          ID
 		flags       uint16
 		ttl         uint8
 		proto       Protocol
@@ -54,7 +53,11 @@ func ParseIP(b []byte, p Protocol) (*IP, int, error) {
 	serviceType := b[1]
 
 	datagramLen := be.Uint16(b[2:4])
-	id := be.Uint16(b[4:6])
+	id, err := ParseID(b[4:6])
+	if err != nil {
+		return nil, 0, fmt.Errorf("netcore.ParseIP: %v", err)
+	}
+
 	flags := be.Uint16(b[6:8])
 
 	ttl := b[8]
@@ -91,7 +94,7 @@ func NewIPBuilder(dstIP net.IP) *IPBuilder {
 	ip := &IP{
 		version:   4,
 		headerLen: 5,
-		id:        uint16(rand.Uint32()),
+		id:        NewID(),
 		proto:     1,
 		ttl:       64,
 		srcIP:     net.IPv4(127, 0, 0, 1),
@@ -111,7 +114,7 @@ func (ib *IPBuilder) ServiceType(st uint8) *IPBuilder {
 	return ib
 }
 
-func (ib *IPBuilder) ID(id uint16) *IPBuilder {
+func (ib *IPBuilder) ID(id ID) *IPBuilder {
 	ib.id = id
 	return ib
 }
@@ -155,7 +158,7 @@ func (ip *IP) Marshal() []byte {
 	buff[1] = ip.serviceType
 
 	be.PutUint16(buff[2:], ip.datagramLen)
-	be.PutUint16(buff[4:], ip.id)
+	be.PutUint16(buff[4:], ip.id.ToUint16())
 	be.PutUint16(buff[6:], ip.flags)
 
 	buff[8] = ip.ttl
@@ -182,7 +185,7 @@ func (ip *IP) DatagramLength() uint16 {
 	return ip.datagramLen
 }
 
-func (ip *IP) ID() uint16 {
+func (ip *IP) ID() ID {
 	return ip.id
 }
 
