@@ -40,7 +40,7 @@ func (r *Request) Make(cancel context.CancelFunc, interval time.Duration) {
 		<-ticker.C
 		icmp := netcore.NewICMP(netcore.ControlKindEchoRequest, r.id, seq)
 		if err := unix.Sendto(r.fd, icmp.Marshal(), 0, &unix.SockaddrInet4{Addr: [4]byte(r.ip.To4())}); err != nil {
-			fmt.Printf("pingo.Make: Failed to send ICMP datagram: %v", err)
+			fmt.Printf("pingo.Make: Failed to send ICMP datagram: %v\n", err)
 			return
 		}
 		seq++
