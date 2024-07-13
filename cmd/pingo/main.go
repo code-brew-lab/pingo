@@ -46,7 +46,8 @@ func main() {
 	}
 	defer req.Close()
 
-	go req.Make(ctx, interval)
+	go req.Make(cancel, interval)
+
 	dataChan, errChan := pingo.Read(ctx, req.FD(), req.ID(), timeout)
 
 	for {

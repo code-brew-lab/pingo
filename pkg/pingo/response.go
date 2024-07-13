@@ -12,7 +12,6 @@ import (
 func Read(ctx context.Context, fd int, id netcore.ID, timeout time.Duration) (<-chan *netcore.Datagram, <-chan error) {
 	dataChan := make(chan *netcore.Datagram, 10)
 	errChan := make(chan error, 10)
-
 	ticker := time.NewTicker(time.Nanosecond)
 
 	go func() {

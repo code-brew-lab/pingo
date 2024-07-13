@@ -1,2 +1,4 @@
 github.com/code-brew-lab/gonq v1.0.1 h1:CUZ0xhNyZsb1R2MI5hV6GoP2lsMUytn2bYpUXdFjTPc=
 github.com/code-brew-lab/gonq v1.0.1/go.mod h1:2wjN9LO0VVWrirJBcsqwuuHYKQQRxpYM78QFauKQlqg=
+golang.org/x/sys v0.22.0 h1:RI27ohtqKCnwULzJLqkv897zojh5/DwS/ENaMzUOaWI=
+golang.org/x/sys v0.22.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=

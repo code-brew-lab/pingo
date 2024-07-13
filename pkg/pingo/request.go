@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/code-brew-lab/pingo/pkg/netcore"
+	"golang.org/x/sys/unix"
 )
 
 type Request struct {
@@ -17,7 +18,7 @@ type Request struct {
 }
 
 func NewRequest(ip net.IP) (*Request, error) {
-	fd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_RAW, syscall.IPPROTO_ICMP)
+	fd, err := unix.Socket(syscall.AF_INET, syscall.SOCK_RAW, syscall.IPPROTO_ICMP)
 	if err != nil {
 		return nil, fmt.Errorf("pingo.NewRequest: %v", err)
 	}
@@ -29,23 +30,20 @@ func NewRequest(ip net.IP) (*Request, error) {
 	}, nil
 }
 
-func (r *Request) Make(ctx context.Context, interval time.Duration) {
+func (r *Request) Make(cancel context.CancelFunc, interval time.Duration) {
 	var seq uint16 = 0
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
+	defer cancel()
 
 	for {
-		select {
-		case <-ctx.Done():
+		<-ticker.C
+		icmp := netcore.NewICMP(netcore.ControlKindEchoRequest, r.id, seq)
+		if err := unix.Sendto(r.fd, icmp.Marshal(), 0, &unix.SockaddrInet4{Addr: [4]byte(r.ip.To4())}); err != nil {
+			fmt.Printf("pingo.Make: Failed to send ICMP datagram: %v", err)
 			return
-		case <-ticker.C:
-			icmp := netcore.NewICMP(netcore.ControlKindEchoRequest, r.id, seq)
-			if err := syscall.Sendto(r.fd, icmp.Marshal(), 0, &syscall.SockaddrInet4{Addr: [4]byte(r.ip.To4())}); err != nil {
-				fmt.Println("Failed to send ICMP packet:", err)
-				return
-			}
-			seq++
 		}
+		seq++
 	}
 }
 
@@ -58,5 +56,5 @@ func (r *Request) ID() netcore.ID {
 }
 
 func (r *Request) Close() error {
-	return syscall.Close(r.fd)
+	return unix.Close(r.fd)
 }
