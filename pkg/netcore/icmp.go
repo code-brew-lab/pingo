@@ -3,7 +3,6 @@ package netcore
 import (
 	"encoding/binary"
 	"fmt"
-	"math/rand"
 
 	"github.com/code-brew-lab/pingo/pkg/netcore/checksum"
 )
@@ -15,7 +14,7 @@ type (
 		kind     ControlKind
 		code     ControlCode
 		checksum uint16
-		id       uint16
+		id       ID
 		seq      uint16
 	}
 )
@@ -38,7 +37,11 @@ func ParseICMP(b []byte) (*ICMP, int, error) {
 	kind := ParseControlKind(b[0])
 	code := ParseControlCode(kind, b[1])
 
-	id := be.Uint16(b[4:])
+	id, err := ParseID(b[4:6])
+	if err != nil {
+		return nil, 0, fmt.Errorf("netcore.ParseICMP: %v", err)
+	}
+
 	seq := be.Uint16(b[6:])
 
 	ch := be.Uint16(b[2:4])
@@ -52,11 +55,11 @@ func ParseICMP(b []byte) (*ICMP, int, error) {
 	}, len(b), nil
 }
 
-func NewICMP(kind ControlKind, seq uint16) *ICMP {
+func NewICMP(kind ControlKind, id ID, seq uint16) *ICMP {
 	icmp := &ICMP{
 		kind: kind,
 		code: 0,
-		id:   uint16(rand.Uint32()),
+		id:   id,
 		seq:  seq,
 	}
 
@@ -70,7 +73,7 @@ func (icmp *ICMP) Marshal() []byte {
 	buff[0] = icmp.Kind().Uint8()
 	buff[1] = icmp.Code().Uint8()
 
-	be.PutUint16(buff[4:], icmp.id)
+	be.PutUint16(buff[4:], icmp.id.ToUint16())
 	be.PutUint16(buff[6:], icmp.seq)
 
 	ch := checksum.Calculate(buff)
@@ -87,7 +90,7 @@ func (icmp *ICMP) Code() ControlCode {
 	return icmp.code
 }
 
-func (icmp *ICMP) ID() uint16 {
+func (icmp *ICMP) ID() ID {
 	return icmp.id
 }
 

@@ -2,36 +2,32 @@ package main
 
 import (
 	"fmt"
-	"syscall"
-	"time"
+	"log"
+	"net"
 
 	"github.com/code-brew-lab/pingo/pkg/pingo"
 )
 
 func main() {
-	fd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_RAW, syscall.IPPROTO_ICMP)
+	req, err := pingo.NewRequest(net.IPv4(149, 0, 16, 25))
 	if err != nil {
-		fmt.Println(err)
-		return
+		log.Fatalln(err)
 	}
-	defer syscall.Close(fd)
 
-	doneChan := make(chan bool)
-	go func() {
-		dataChan, errChan := pingo.Read(doneChan, fd)
+	req.Make()
 
-		for {
-			select {
-			case d := <-dataChan:
-				ip := d.IP()
-				icmp := d.ICMP()
-				fmt.Printf("%s -> %s\n", ip.SourceIP(), ip.DestinationIP())
-				fmt.Printf("Kind: %s, Status: %s\n", icmp.Kind(), icmp.Code().String(icmp.Kind()))
-			case e := <-errChan:
-				fmt.Println(e)
-			}
+	dataChan, errChan := pingo.Read(req.DoneChannel(), req.FD())
+
+	for {
+		select {
+		case d := <-dataChan:
+			ip := d.IP()
+			icmp := d.ICMP()
+			fmt.Printf("[%s -> %s]", ip.SourceIP(), ip.DestinationIP())
+			fmt.Printf("  ")
+			fmt.Printf("Seq: %d, Kind: %s, StatusCode: %s\n", icmp.Sequence(), icmp.Kind(), icmp.Code().String(icmp.Kind()))
+		case err := <-errChan:
+			fmt.Println(err)
 		}
-	}()
-	time.Sleep(time.Second * 5)
-	doneChan <- true
+	}
 }
