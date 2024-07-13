@@ -51,7 +51,7 @@ build:
 	@echo "GOOS         = $(GOOS)"
 	@echo "GOARCH       = $(GOARCH)"
 	@echo "CGO_ENABLED  = $(CGO_ENABLED)"
-	@go build -o $(BIN_DIR)/$(PROJECT_NAME)-$(GOOS)-$(GOARCH) -v -x $(SRC_DIR)/$(PROJECT_NAME)
+	@GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o $(BIN_DIR)/$(PROJECT_NAME)-$(GOOS)-$(GOARCH) -v -x $(SRC_DIR)/$(PROJECT_NAME)
 	@echo "Built!"
 
 clean:

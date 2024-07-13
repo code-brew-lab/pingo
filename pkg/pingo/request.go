@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"syscall"
 	"time"
 
 	"github.com/code-brew-lab/pingo/pkg/netcore"
@@ -18,7 +17,7 @@ type Request struct {
 }
 
 func NewRequest(ip net.IP) (*Request, error) {
-	fd, err := unix.Socket(syscall.AF_INET, syscall.SOCK_RAW, syscall.IPPROTO_ICMP)
+	fd, err := unix.Socket(unix.AF_INET, unix.SOCK_RAW, unix.IPPROTO_ICMP)
 	if err != nil {
 		return nil, fmt.Errorf("pingo.NewRequest: %v", err)
 	}

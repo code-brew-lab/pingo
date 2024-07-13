@@ -3,10 +3,10 @@ package pingo
 import (
 	"context"
 	"fmt"
-	"syscall"
 	"time"
 
 	"github.com/code-brew-lab/pingo/pkg/netcore"
+	"golang.org/x/sys/unix"
 )
 
 func Read(ctx context.Context, fd int, id netcore.ID, timeout time.Duration) (<-chan *netcore.Datagram, <-chan error) {
@@ -46,7 +46,7 @@ func Read(ctx context.Context, fd int, id netcore.ID, timeout time.Duration) (<-
 
 func read(fd int) (*netcore.Datagram, error) {
 	buff := make([]byte, 1024)
-	numRead, err := syscall.Read(fd, buff)
+	numRead, err := unix.Read(fd, buff)
 	if err != nil {
 		return nil, err
 	}
