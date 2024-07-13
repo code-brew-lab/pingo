@@ -1,33 +1,62 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"log"
 	"net"
+	"os"
+	"time"
 
+	"github.com/code-brew-lab/gonq/pkg/dns"
 	"github.com/code-brew-lab/pingo/pkg/pingo"
 )
 
 func main() {
-	req, err := pingo.NewRequest(net.IPv4(149, 0, 16, 25))
-	if err != nil {
-		log.Fatalln(err)
+	args := setupFlags()
+	interval := time.Duration(args.interval) * time.Second
+	timeout := time.Duration(args.timeout) * time.Millisecond
+
+	var ip net.IP
+
+	if parsedIP := net.ParseIP(args.host); parsedIP != nil {
+		ip = parsedIP
+	} else {
+		dnsReq, err := dns.NewRequest(args.client, 53)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		dnsReq.AddQuery(args.host, dns.TypeA, dns.ClassINET)
+
+		dnsResp, err := dnsReq.Make()
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		ip = dnsResp.IPs()[0]
 	}
 
-	req.Make()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	dataChan, errChan := pingo.Read(req.DoneChannel(), req.FD())
+	req, err := pingo.NewRequest(ip)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer req.Close()
+
+	go req.Make(ctx, interval)
+	dataChan, errChan := pingo.Read(ctx, req.FD(), req.ID(), timeout)
 
 	for {
 		select {
 		case d := <-dataChan:
-			ip := d.IP()
-			icmp := d.ICMP()
-			fmt.Printf("[%s -> %s]", ip.SourceIP(), ip.DestinationIP())
-			fmt.Printf("  ")
-			fmt.Printf("Seq: %d, Kind: %s, StatusCode: %s\n", icmp.Sequence(), icmp.Kind(), icmp.Code().String(icmp.Kind()))
+			fmt.Println(d)
 		case err := <-errChan:
 			fmt.Println(err)
+		case <-ctx.Done():
+			return
 		}
 	}
 }

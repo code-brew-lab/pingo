@@ -7,20 +7,19 @@ import (
 	"github.com/code-brew-lab/pingo/pkg/netcore/checksum"
 )
 
-//0800f7ff00000000
-
 type (
 	ICMP struct {
-		kind     ControlKind
-		code     ControlCode
-		checksum uint16
-		id       ID
-		seq      uint16
+		kind      ControlKind
+		code      ControlCode
+		checksum  uint16
+		id        ID
+		seq       uint16
+		timestamp Timestamp
 	}
 )
 
 const (
-	minICMPLength uint16 = 8
+	minICMPLength uint16 = 16
 	maxICMPLength uint16 = 576
 )
 
@@ -36,6 +35,7 @@ func ParseICMP(b []byte) (*ICMP, int, error) {
 
 	kind := ParseControlKind(b[0])
 	code := ParseControlCode(kind, b[1])
+	ch := be.Uint16(b[2:])
 
 	id, err := ParseID(b[4:6])
 	if err != nil {
@@ -44,23 +44,28 @@ func ParseICMP(b []byte) (*ICMP, int, error) {
 
 	seq := be.Uint16(b[6:])
 
-	ch := be.Uint16(b[2:4])
+	timestamp, err := ParseTimestamp(b[8:16])
+	if err != nil {
+		return nil, 0, fmt.Errorf("netcore.ParseICMP: %v", err)
+	}
 
 	return &ICMP{
-		kind:     kind,
-		code:     code,
-		checksum: ch,
-		id:       id,
-		seq:      seq,
+		kind:      kind,
+		code:      code,
+		checksum:  ch,
+		id:        id,
+		seq:       seq,
+		timestamp: timestamp,
 	}, len(b), nil
 }
 
 func NewICMP(kind ControlKind, id ID, seq uint16) *ICMP {
 	icmp := &ICMP{
-		kind: kind,
-		code: 0,
-		id:   id,
-		seq:  seq,
+		kind:      kind,
+		code:      0,
+		id:        id,
+		seq:       seq,
+		timestamp: TimestampNow(),
 	}
 
 	return icmp
@@ -76,9 +81,10 @@ func (icmp *ICMP) Marshal() []byte {
 	be.PutUint16(buff[4:], icmp.id.ToUint16())
 	be.PutUint16(buff[6:], icmp.seq)
 
-	ch := checksum.Calculate(buff)
-	be.PutUint16(buff[2:4], ch)
+	be.PutUint64(buff[8:], uint64(icmp.timestamp))
 
+	ch := checksum.Calculate(buff)
+	be.PutUint16(buff[2:], ch)
 	return buff
 }
 
@@ -96,4 +102,8 @@ func (icmp *ICMP) ID() ID {
 
 func (icmp *ICMP) Sequence() uint16 {
 	return icmp.seq
+}
+
+func (icmp *ICMP) Timestamp() Timestamp {
+	return icmp.timestamp
 }
